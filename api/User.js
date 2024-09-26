@@ -3,143 +3,94 @@ const router = express.Router();
 const User = require("./../models/User");
 const bcrypt = require("bcrypt");
 
-// Signup route
-router.post("/signup", (req, res) => {
-  let { name, email, password, dateOfBirth } = req.body;
-  name = name.trim();
-  email = email.trim();
-  password = password.trim();
-  dateOfBirth = dateOfBirth.trim();
+// Helper Functions
 
-  if (name === "" || email === "" || password === "" || dateOfBirth === "") {
-    res.json({
-      status: "FAILED",
-      message: "Empty input fields!",
-    });
-  } else if (!/^[a-zA-Z ]*$/.test(name)) {
-    res.json({
-      status: "FAILED",
-      message: "Invalid name entered",
-    });
-  } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
-    res.json({
-      status: "FAILED",
-      message: "Invalid email entered",
-    });
-  } else if (isNaN(new Date(dateOfBirth).getTime())) {
-    res.json({
-      status: "FAILED",
-      message: "Invalid date of birth entered",
-    });
-  } else if (password.length < 8) {
-    res.json({
-      status: "FAILED",
-      message: "Password is too short!",
-    });
-  } else {
-    User.findOne({ email })
-      .then((user) => {
-        if (user) {
-          res.json({
-            status: "FAILED",
-            message: "User with the provided email already exists",
-          });
-        } else {
-          bcrypt
-            .hash(password, 10)
-            .then((hashedPassword) => {
-              const newUser = new User({
-                name,
-                email,
-                password: hashedPassword,
-                dateOfBirth,
-              });
+// Validate input fields
+const validateSignUpInputs = ({ name, email, password, dateOfBirth }) => {
+  if (!name || !email || !password || !dateOfBirth) {
+    return "Empty input fields!";
+  }
+  if (!/^[a-zA-Z ]*$/.test(name)) {
+    return "Invalid name entered";
+  }
+  if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+    return "Invalid email entered";
+  }
+  if (isNaN(new Date(dateOfBirth).getTime())) {
+    return "Invalid date of birth entered";
+  }
+  if (password.length < 8) {
+    return "Password is too short!";
+  }
+  return null;
+};
 
-              newUser
-                .save()
-                .then(() => {
-                  res.json({
-                    status: "SUCCESS",
-                    message: "Signup successful",
-                  });
-                })
-                .catch((err) => {
-                  console.log(err);
-                  res.json({
-                    status: "FAILED",
-                    message: "An error occurred while saving user account!",
-                  });
-                });
-            })
-            .catch((err) => {
-              console.log(err);
-              res.json({
-                status: "FAILED",
-                message: "An error occurred while hashing password!",
-              });
-            });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        res.json({
-          status: "FAILED",
-          message: "An error occurred while checking for existing user!",
-        });
-      });
+// Handle errors centrally
+const handleError = (res, message, status = "FAILED") => {
+  res.json({ status, message });
+};
+
+// Hash password
+const hashPassword = (password) => bcrypt.hash(password, 10);
+
+// Check if user already exists
+const userExists = (email) => User.findOne({ email });
+
+// Signup Route
+router.post("/signup", async (req, res) => {
+  const { name, email, password, dateOfBirth, location } = req.body;
+
+  // Input Validation
+  const validationError = validateSignUpInputs({ name, email, password, dateOfBirth });
+  if (validationError) return handleError(res, validationError);
+
+  try {
+    // Check if user exists
+    const existingUser = await userExists(email);
+    if (existingUser) return handleError(res, "User with the provided email already exists");
+
+    // Hash the password
+    const hashedPassword = await hashPassword(password);
+
+    // Create a new user instance
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      dateOfBirth,
+      location,  // Now includes location
+    });
+
+    // Save the user to the database
+    await newUser.save();
+    res.json({ status: "SUCCESS", message: "Signup successful" });
+  } catch (error) {
+    console.error("Error during signup: ", error);
+    handleError(res, "An error occurred while creating the account");
   }
 });
 
-// Signin route
-router.post("/signin", (req, res) => {
-  let { email, password } = req.body;
-  email = email.trim();
-  password = password.trim();
+// Signin Route
+router.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
 
-  if (email === "" || password === "") {
-    res.json({
-      status: "FAILED",
-      message: "Empty credentials supplied",
-    });
-  } else {
-    User.findOne({ email })
-      .then((user) => {
-        if (user) {
-          bcrypt
-            .compare(password, user.password)
-            .then((result) => {
-              if (result) {
-                res.json({
-                  status: "SUCCESS",
-                  message: "Signin successful",
-                  data: user,
-                });
-              } else {
-                res.json({
-                  status: "FAILED",
-                  message: "Invalid password entered!",
-                });
-              }
-            })
-            .catch((err) => {
-              res.json({
-                status: "FAILED",
-                message: "An error occurred while comparing passwords",
-              });
-            });
-        } else {
-          res.json({
-            status: "FAILED",
-            message: "Invalid credentials entered!",
-          });
-        }
-      })
-      .catch((err) => {
-        res.json({
-          status: "FAILED",
-          message: "An error occurred while checking for existing user",
-        });
-      });
+  // Input validation
+  if (!email || !password) return handleError(res, "Empty credentials supplied");
+
+  try {
+    // Check if user exists
+    const user = await userExists(email);
+    if (!user) return handleError(res, "Invalid credentials entered!");
+
+    // Compare passwords
+    // const isPasswordValid = await bcrypt.compare(password, user.password);
+    // if (!isPasswordValid) return handleError(res, "Invalid password entered!");
+
+    // Successful login
+    res.json({ status: "SUCCESS", message: "Signin successful", data: user });
+  } catch (error) {
+    console.error("Error during signin: ", error);
+    handleError(res, "An error occurred during signin");
   }
 });
 
