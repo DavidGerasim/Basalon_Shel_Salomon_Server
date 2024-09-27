@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
-  name: {
+  firstName: {
+    type: String,
+    required: true,
+  },
+  lastName: {
     type: String,
     required: true,
   },
@@ -15,25 +19,30 @@ const UserSchema = new Schema({
     type: String,
     required: true,
   },
-  dateOfBirth: {
-    type: Date,
+  phoneNumber: {
+    type: String,
+    required: true,
   },
-  location: {
-    address: String,   // Address as a string
-    city: String,      // City as a string
-    coordinates: {     // Coordinates (latitude and longitude)
-      lat: {
-        type: Number,
-        required: true,
-      },
-      lng: {
-        type: Number,
-        required: true,
-      },
+  mainInstrument: {
+    type: String,
+    required: true,
+  },
+  address: {
+    description: {
+      type: String,
+      required: true,
     },
-  },
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
+      required: true,
+    }
+  }
 });
 
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model("NewUser", UserSchema);
 
 module.exports = User;

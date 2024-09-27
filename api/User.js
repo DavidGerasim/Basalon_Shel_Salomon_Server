@@ -6,22 +6,49 @@ const bcrypt = require("bcrypt");
 // Helper Functions
 
 // Validate input fields
-const validateSignUpInputs = ({ name, email, password, dateOfBirth }) => {
-  if (!name || !email || !password || !dateOfBirth) {
+const validateSignUpInputs = ({
+  firstName,
+  lastName,
+  email,
+  password,
+  confirmPassword,
+  phoneNumber,
+  address,
+  mainInstrument
+}) => {
+  if (!firstName || !lastName || !email || !password || !confirmPassword || !phoneNumber || !address || !mainInstrument) {
     return "Empty input fields!";
   }
-  if (!/^[a-zA-Z ]*$/.test(name)) {
+  
+  // Validate name fields
+  if (!/^[a-zA-Z ]*$/.test(firstName) || !/^[a-zA-Z ]*$/.test(lastName)) {
     return "Invalid name entered";
   }
+
+  // Validate email format
   if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
     return "Invalid email entered";
   }
-  if (isNaN(new Date(dateOfBirth).getTime())) {
-    return "Invalid date of birth entered";
-  }
+
+  // Validate password length and match
   if (password.length < 8) {
     return "Password is too short!";
   }
+  
+  if (password !== confirmPassword) {
+    return "Passwords do not match!";
+  }
+
+  // Validate phone number (simple check for numbers and length)
+  if (!/^\d{10,15}$/.test(phoneNumber)) {
+    return "Invalid phone number!";
+  }
+
+  // Validate address structure
+  if (!address || !address.description || !address.latitude || !address.longitude) {
+    return "Invalid address entered!";
+  }
+
   return null;
 };
 
@@ -38,10 +65,30 @@ const userExists = (email) => User.findOne({ email });
 
 // Signup Route
 router.post("/signup", async (req, res) => {
-  const { name, email, password, dateOfBirth, location } = req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    confirmPassword,
+    phoneNumber,
+    mainInstrument,
+    address
+  } = req.body;
+
+  console.log(req.body);
 
   // Input Validation
-  const validationError = validateSignUpInputs({ name, email, password, dateOfBirth });
+  const validationError = validateSignUpInputs({
+    firstName,
+    lastName,
+    email,
+    password,
+    confirmPassword,
+    phoneNumber,
+    address,
+    mainInstrument
+  });
   if (validationError) return handleError(res, validationError);
 
   try {
@@ -54,11 +101,13 @@ router.post("/signup", async (req, res) => {
 
     // Create a new user instance
     const newUser = new User({
-      name,
-      email,
+      firstName: `${firstName}`, // Combine first and last name
+      lastName: `${lastName}`,
+      email: email,
       password: hashedPassword,
-      dateOfBirth,
-      location,  // Now includes location
+      phoneNumber,
+      address,
+      mainInstrument
     });
 
     // Save the user to the database
@@ -83,8 +132,8 @@ router.post("/signin", async (req, res) => {
     if (!user) return handleError(res, "Invalid credentials entered!");
 
     // Compare passwords
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    // if (!isPasswordValid) return handleError(res, "Invalid password entered!");
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return handleError(res, "Invalid password entered!");
 
     // Successful login
     res.json({ status: "SUCCESS", message: "Signin successful", data: user });
