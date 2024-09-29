@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const path = require("path"); // ייבוא מודול path
 
 const UserSchema = new Schema({
   firstName: {
@@ -39,8 +40,12 @@ const UserSchema = new Schema({
     longitude: {
       type: Number,
       required: true,
-    }
-  }
+    },
+  },
+  profilePicture: {
+    type: String,
+    default: path.join(__dirname, 'assets', 'img', 'Default_pfp.svg.png'), // עדכון לנתיב הנכון
+  },
 });
 
 const User = mongoose.model("NewUser", UserSchema);
