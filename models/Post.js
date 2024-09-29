@@ -6,6 +6,18 @@ const postSchema = new mongoose.Schema({
     type: Object,
     required: false, // שדה זה לא חובה
   },
+  latitude: {
+    type: Number, // קואורדינטות רוחב
+    required: false, // שדה זה לא חובה
+  },
+  longitude: {
+    type: Number, // קואורדינטות אורך
+    required: false, // שדה זה לא חובה
+  },
+  date: {
+    type: Date,
+    required: false, // שדה זה לא חובה
+  },
   beginningTime: {
     type: Date,
     required: false, // שדה זה לא חובה
