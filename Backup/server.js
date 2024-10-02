@@ -32,8 +32,8 @@ app.post("/api/send-password-reset", async (req, res) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "",
-      pass: "",
+      user: "tuzdavid@gmail.com",
+      pass: "bre2kd2nce",
     },
   });
 
