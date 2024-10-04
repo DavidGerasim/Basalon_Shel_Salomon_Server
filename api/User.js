@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("./../models/User");
 const bcrypt = require("bcrypt");
+const { generateToken } = require("./../auth"); // ייבוא פונקציית יצירת ה-JWT
 
 // Helper Functions
 
@@ -14,12 +15,21 @@ const validateSignUpInputs = ({
   confirmPassword,
   phoneNumber,
   address,
-  mainInstrument
+  mainInstrument,
 }) => {
-  if (!firstName || !lastName || !email || !password || !confirmPassword || !phoneNumber || !address || !mainInstrument) {
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !password ||
+    !confirmPassword ||
+    !phoneNumber ||
+    !address ||
+    !mainInstrument
+  ) {
     return "Empty input fields!";
   }
-  
+
   // Validate name fields
   if (!/^[a-zA-Z ]*$/.test(firstName) || !/^[a-zA-Z ]*$/.test(lastName)) {
     return "Invalid name entered";
@@ -34,7 +44,7 @@ const validateSignUpInputs = ({
   if (password.length < 8) {
     return "Password is too short!";
   }
-  
+
   if (password !== confirmPassword) {
     return "Passwords do not match!";
   }
@@ -45,7 +55,12 @@ const validateSignUpInputs = ({
   }
 
   // Validate address structure
-  if (!address || !address.description || !address.latitude || !address.longitude) {
+  if (
+    !address ||
+    !address.description ||
+    !address.latitude ||
+    !address.longitude
+  ) {
     return "Invalid address entered!";
   }
 
@@ -73,7 +88,7 @@ router.post("/signup", async (req, res) => {
     confirmPassword,
     phoneNumber,
     mainInstrument,
-    address
+    address,
   } = req.body;
 
   console.log(req.body);
@@ -87,14 +102,15 @@ router.post("/signup", async (req, res) => {
     confirmPassword,
     phoneNumber,
     address,
-    mainInstrument
+    mainInstrument,
   });
   if (validationError) return handleError(res, validationError);
 
   try {
     // Check if user exists
     const existingUser = await userExists(email);
-    if (existingUser) return handleError(res, "User with the provided email already exists");
+    if (existingUser)
+      return handleError(res, "User with the provided email already exists");
 
     // Hash the password
     const hashedPassword = await hashPassword(password);
@@ -107,7 +123,7 @@ router.post("/signup", async (req, res) => {
       password: hashedPassword,
       phoneNumber,
       address,
-      mainInstrument
+      mainInstrument,
     });
 
     // Save the user to the database
@@ -123,20 +139,18 @@ router.post("/signup", async (req, res) => {
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
-  // Input validation
-  if (!email || !password) return handleError(res, "Empty credentials supplied");
+  if (!email || !password)
+    return handleError(res, "Empty credentials supplied");
 
   try {
-    // Check if user exists
     const user = await userExists(email);
     if (!user) return handleError(res, "Invalid credentials entered!");
 
-    // Compare passwords
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) return handleError(res, "Invalid password entered!");
 
-    // Successful login
-    res.json({ status: "SUCCESS", message: "Signin successful", data: user });
+    const token = generateToken(user._id);
+    res.json({ status: "SUCCESS", message: "Signin successful", token });
   } catch (error) {
     console.error("Error during signin: ", error);
     handleError(res, "An error occurred during signin");
