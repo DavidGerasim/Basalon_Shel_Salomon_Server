@@ -14,12 +14,21 @@ const validateSignUpInputs = ({
   confirmPassword,
   phoneNumber,
   address,
-  mainInstrument
+  mainInstrument,
 }) => {
-  if (!firstName || !lastName || !email || !password || !confirmPassword || !phoneNumber || !address || !mainInstrument) {
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !password ||
+    !confirmPassword ||
+    !phoneNumber ||
+    !address ||
+    !mainInstrument
+  ) {
     return "Empty input fields!";
   }
-  
+
   // Validate name fields
   if (!/^[a-zA-Z ]*$/.test(firstName) || !/^[a-zA-Z ]*$/.test(lastName)) {
     return "Invalid name entered";
@@ -34,7 +43,7 @@ const validateSignUpInputs = ({
   if (password.length < 8) {
     return "Password is too short!";
   }
-  
+
   if (password !== confirmPassword) {
     return "Passwords do not match!";
   }
@@ -50,11 +59,6 @@ const validateSignUpInputs = ({
   }
 
   return null;
-};
-
-// Handle errors centrally
-const handleError = (res, message, status = "FAILED") => {
-  res.json({ status, message });
 };
 
 // Hash password
@@ -73,10 +77,8 @@ router.post("/signup", async (req, res) => {
     confirmPassword,
     phoneNumber,
     mainInstrument,
-    address
+    address,
   } = req.body;
-
-  console.log(req.body);
 
   // Input Validation
   const validationError = validateSignUpInputs({
@@ -87,35 +89,36 @@ router.post("/signup", async (req, res) => {
     confirmPassword,
     phoneNumber,
     address,
-    mainInstrument
+    mainInstrument,
   });
-  if (validationError) return handleError(res, validationError);
+  if (validationError) return res.status(400).json({ message: validationError });
 
   try {
     // Check if user exists
     const existingUser = await userExists(email);
-    if (existingUser) return handleError(res, "User with the provided email already exists");
+    if (existingUser)
+      return res.status(400).json({ message: "User with the provided email already exists" });
 
     // Hash the password
     const hashedPassword = await hashPassword(password);
 
     // Create a new user instance
     const newUser = new User({
-      firstName: `${firstName}`, // Combine first and last name
-      lastName: `${lastName}`,
-      email: email,
+      firstName,
+      lastName,
+      email,
       password: hashedPassword,
       phoneNumber,
       address,
-      mainInstrument
+      mainInstrument,
     });
 
     // Save the user to the database
     await newUser.save();
-    res.json({ status: "SUCCESS", message: "Signup successful" });
+    res.status(201).json({ message: "Signup successful" });
   } catch (error) {
     console.error("Error during signup: ", error);
-    handleError(res, "An error occurred while creating the account");
+    res.status(500).json({ message: "An error occurred while creating the account" });
   }
 });
 
@@ -123,24 +126,33 @@ router.post("/signup", async (req, res) => {
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
-  // Input validation
-  if (!email || !password) return handleError(res, "Empty credentials supplied");
+  if (!email || !password) return res.status(400).json({ message: "Empty credentials supplied" });
 
   try {
     // Check if user exists
     const user = await userExists(email);
-    if (!user) return handleError(res, "Invalid credentials entered!");
+    if (!user) return res.status(400).json({ message: "Invalid credentials entered!" });
 
     // Compare passwords
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return handleError(res, "Invalid password entered!");
+    if (!isPasswordValid) return res.status(400).json({ message: "Invalid password entered!" });
 
-    // Successful login
-    res.json({ status: "SUCCESS", message: "Signin successful", data: user });
+    // Store user ID in session
+    req.session.userId = user._id;
+
+    res.json({ message: "Signin successful" });
   } catch (error) {
     console.error("Error during signin: ", error);
-    handleError(res, "An error occurred during signin");
+    res.status(500).json({ message: "An error occurred during signin" });
   }
+});
+
+// Signout Route
+router.post("/signout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) return res.status(500).json({ message: "Failed to sign out" });
+    res.json({ message: "Signout successful" });
+  });
 });
 
 module.exports = router;

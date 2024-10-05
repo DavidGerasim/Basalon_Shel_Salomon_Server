@@ -2,11 +2,13 @@ require("./config/db");
 
 const express = require("express");
 const os = require("os");
-const nodemailer = require("nodemailer");
-const cors = require("cors");
 const http = require("http");
 const socketIo = require("socket.io");
-const Post = require("./models/Post"); // Ensure correct path to Post model
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
+const Post = require("./models/Post");
+const UserRouter = require("./api/User");
+const PostRouter = require("./api/Post");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,46 +17,33 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Routers
-const UserRouter = require("./api/User");
-const PostRouter = require("./api/Post");
-
-// Middleware
-app.use(cors());
+// Middleware to parse JSON
 app.use(express.json());
-app.use("/user", UserRouter);
-app.use("/api/posts", PostRouter); // Adding the route for posts
 
-// Email sending route (Password reset)
-app.post("/api/send-password-reset", async (req, res) => {
-  const { email } = req.body;
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "tuzdavid@gmail.com",
-      pass: "bre2kd2nce",
+// Setup session middleware
+app.use(
+  session({
+    secret: "mySecretKey", // Change to a secure secret in production
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: "mongodb://localhost:27017/session_management", // MongoDB URL for storing sessions
+      collectionName: "sessions", // MongoDB collection to store sessions
+    }),
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 1 day session expiration
     },
-  });
+  })
+);
 
-  const mailOptions = {
-    from: "tuzdavid@gmail.com",
-    to: email,
-    subject: "Password Reset",
-    text: "Click the link to reset your password.",
-  };
+// User Routes
+app.use("/user", UserRouter);
 
-  try {
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-});
+// Post Routes with session check middleware
+app.use("/api/posts", PostRouter);
 
 // MongoDB Change Stream to watch changes in the Post collection
-const postChangeStream = Post.watch(); // Watch for changes in the Post collection
+const postChangeStream = Post.watch();
 postChangeStream.on("change", (change) => {
   console.log("Post change detected:", change);
   io.emit("postUpdated", change); // Emit the post update event to all connected clients
@@ -64,13 +53,12 @@ postChangeStream.on("change", (change) => {
 io.on("connection", (socket) => {
   console.log("New client connected");
 
-  // Handle client disconnection
   socket.on("disconnect", () => {
     console.log("Client disconnected");
   });
 });
 
-// Start server with both HTTP and WebSocket functionality
+// Start the server
 server.listen(port, () => {
   const networkInterfaces = os.networkInterfaces();
   const ip =

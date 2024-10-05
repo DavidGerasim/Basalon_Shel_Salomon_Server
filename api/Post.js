@@ -1,64 +1,68 @@
 const express = require("express");
-const Post = require("../models/Post"); // ודא שהנתיב נכון לקובץ המודל
+const Post = require("../models/Post");
 
 const router = express.Router();
 
-// Route ליצירת פוסט חדש
-router.post("/", async (req, res) => {
+// Middleware to check if user is authenticated
+const isAuthenticated = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Unauthorized: Please log in" });
+  }
+  next();
+};
+
+// Route to create a new post (protected)
+router.post("/", isAuthenticated, async (req, res) => {
   try {
-    const newPost = new Post(req.body); // קח את כל הנתונים מהבקשה
-    await newPost.save(); // שמור את הפוסט
-    res.status(201).json(newPost); // החזר תשובה עם הפוסט שנשמר
+    const newPost = new Post(req.body);
+    await newPost.save();
+    res.status(201).json(newPost);
   } catch (error) {
-    res.status(400).json({ message: error.message }); // החזר שגיאה אם שמירת הפוסט נכשלה
+    res.status(400).json({ message: error.message });
   }
 });
 
-// Route לקבלת כל הפוסטים
+// Route to get all posts
 router.get("/", async (req, res) => {
   try {
-    const posts = await Post.find(); // קח את כל הפוסטים
-    res.json(posts); // החזר את הפוסטים
+    const posts = await Post.find();
+    res.json(posts);
   } catch (error) {
-    res.status(500).json({ message: error.message }); // החזר שגיאה אם קבלת הפוסטים נכשלה
+    res.status(500).json({ message: error.message });
   }
 });
 
-// Route לקבלת פוסט לפי ID
+// Route to get a post by ID
 router.get("/:id", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id); // קח את הפוסט לפי ID
-    if (!post) return res.status(404).json({ message: "Post not found" }); // החזר שגיאה אם הפוסט לא נמצא
-    res.json(post); // החזר את הפוסט
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post);
   } catch (error) {
-    res.status(500).json({ message: error.message }); // החזר שגיאה אם קבלת הפוסט נכשלה
+    res.status(500).json({ message: error.message });
   }
 });
 
-// Route לעדכון פוסט לפי ID
-router.put("/:id", async (req, res) => {
+// Route to update a post by ID (protected)
+router.put("/:id", isAuthenticated, async (req, res) => {
   try {
-    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    }); // עדכן את הפוסט
-    if (!updatedPost)
-      return res.status(404).json({ message: "Post not found" }); // החזר שגיאה אם הפוסט לא נמצא
-    res.json(updatedPost); // החזר את הפוסט המעודכן
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedPost) return res.status(404).json({ message: "Post not found" });
+    res.json(updatedPost);
   } catch (error) {
-    res.status(400).json({ message: error.message }); // החזר שגיאה אם עדכון הפוסט נכשלה
+    res.status(400).json({ message: error.message });
   }
 });
 
-// Route למחיקת פוסט לפי ID
-router.delete("/:id", async (req, res) => {
+// Route to delete a post by ID (protected)
+router.delete("/:id", isAuthenticated, async (req, res) => {
   try {
-    const deletedPost = await Post.findByIdAndDelete(req.params.id); // מחוק את הפוסט
-    if (!deletedPost)
-      return res.status(404).json({ message: "Post not found" }); // החזר שגיאה אם הפוסט לא נמצא
-    res.json({ message: "Post deleted" }); // החזר הודעה שהפוסט נמחק
+    const deletedPost = await Post.findByIdAndDelete(req.params.id);
+    if (!deletedPost) return res.status(404).json({ message: "Post not found" });
+    res.json({ message: "Post deleted" });
   } catch (error) {
-    res.status(500).json({ message: error.message }); // החזר שגיאה אם מחיקת הפוסט נכשלה
+    res.status(500).json({ message: error.message });
   }
 });
 
-module.exports = router; // ייצא את ה-Router
+module.exports = router;
