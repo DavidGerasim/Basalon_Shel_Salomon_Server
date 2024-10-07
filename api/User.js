@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("./../models/User");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken"); // JWT module
 
 // Helper Functions
 
@@ -54,7 +55,12 @@ const validateSignUpInputs = ({
   }
 
   // Validate address structure
-  if (!address || !address.description || !address.latitude || !address.longitude) {
+  if (
+    !address ||
+    !address.description ||
+    !address.latitude ||
+    !address.longitude
+  ) {
     return "Invalid address entered!";
   }
 
@@ -80,6 +86,8 @@ router.post("/signup", async (req, res) => {
     address,
   } = req.body;
 
+  console.log("Signup request received:", req.body); // Log signup request
+
   // Input Validation
   const validationError = validateSignUpInputs({
     firstName,
@@ -91,16 +99,24 @@ router.post("/signup", async (req, res) => {
     address,
     mainInstrument,
   });
-  if (validationError) return res.status(400).json({ message: validationError });
+  if (validationError) {
+    console.log("Validation error:", validationError); // Log validation error
+    return res.status(400).json({ message: validationError });
+  }
 
   try {
     // Check if user exists
     const existingUser = await userExists(email);
-    if (existingUser)
-      return res.status(400).json({ message: "User with the provided email already exists" });
+    if (existingUser) {
+      console.log("User already exists:", existingUser); // Log existing user
+      return res
+        .status(400)
+        .json({ message: "User with the provided email already exists" });
+    }
 
     // Hash the password
     const hashedPassword = await hashPassword(password);
+    console.log("Password hashed successfully"); // Log password hash success
 
     // Create a new user instance
     const newUser = new User({
@@ -115,10 +131,23 @@ router.post("/signup", async (req, res) => {
 
     // Save the user to the database
     await newUser.save();
-    res.status(201).json({ message: "Signup successful" });
+    console.log("New user saved:", newUser); // Log new user save
+
+    // Create a JWT token
+    const token = jwt.sign({ userId: newUser._id }, "your-secret-key", {
+      expiresIn: "1h",
+    });
+    console.log("JWT token created:", token); // Log JWT token creation
+
+    // Save user ID in session
+    req.session.userId = newUser._id;
+
+    res.status(201).json({ message: "Signup successful", token });
   } catch (error) {
     console.error("Error during signup: ", error);
-    res.status(500).json({ message: "An error occurred while creating the account" });
+    res
+      .status(500)
+      .json({ message: "An error occurred while creating the account" });
   }
 });
 
@@ -126,31 +155,98 @@ router.post("/signup", async (req, res) => {
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).json({ message: "Empty credentials supplied" });
+  console.log("Signin request received:", req.body); // Log signin request
+
+  if (!email || !password) {
+    console.log("Empty credentials supplied"); // Log empty credentials
+    return res.status(400).json({ message: "Empty credentials supplied" });
+  }
 
   try {
     // Check if user exists
     const user = await userExists(email);
-    if (!user) return res.status(400).json({ message: "Invalid credentials entered!" });
+    if (!user) {
+      console.log("Invalid credentials entered! User not found."); // Log user not found
+      return res.status(400).json({ message: "Invalid credentials entered!" });
+    }
 
     // Compare passwords
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return res.status(400).json({ message: "Invalid password entered!" });
+    if (!isPasswordValid) {
+      console.log("Invalid password entered!"); // Log invalid password
+      return res.status(400).json({ message: "Invalid password entered!" });
+    }
 
-    // Store user ID in session
+    // Create a JWT token
+    const token = jwt.sign({ userId: user._id }, "your-secret-key", {
+      expiresIn: "1h",
+    });
+    console.log("JWT token created:", token); // Log JWT token creation
+
+    // Save user ID in session
     req.session.userId = user._id;
 
-    res.json({ message: "Signin successful" });
+    // Return response with necessary info
+    res.status(200).json({
+      message: "Signin successful",
+      firstName: user.firstName,
+      lastName: user.lastName,
+      token,
+    });
   } catch (error) {
     console.error("Error during signin: ", error);
     res.status(500).json({ message: "An error occurred during signin" });
   }
 });
 
+// User Profile Route
+router.get("/profile", async (req, res) => {
+  const token = req.headers["authorization"]?.split(" ")[1]; // Extract token from headers
+  console.log("User profile request received. Token:", token); // Log token
+
+  if (!token) {
+    console.log("No token provided."); // Log missing token
+    return res.status(403).json({ message: "Token is required!" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, "your-secret-key"); // Verify token
+    console.log("Decoded token:", decoded); // Log decoded token
+    const userId = decoded.userId;
+
+    // Fetch user data from database
+    const user = await User.findById(userId).select("-password"); // Exclude password from response
+    if (!user) {
+      console.log("User not found for ID:", userId); // Log user not found
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    // Return user profile data
+    res.status(200).json({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      address: user.address,
+      mainInstrument: user.mainInstrument,
+    });
+  } catch (error) {
+    console.error("Error fetching user profile: ", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching user profile" });
+  }
+});
+
 // Signout Route
 router.post("/signout", (req, res) => {
+  console.log("Signout request received"); // Log signout request
   req.session.destroy((err) => {
-    if (err) return res.status(500).json({ message: "Failed to sign out" });
+    if (err) {
+      console.error("Failed to sign out:", err); // Log signout error
+      return res.status(500).json({ message: "Failed to sign out" });
+    }
+    console.log("Signout successful"); // Log successful signout
     res.json({ message: "Signout successful" });
   });
 });
