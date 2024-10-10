@@ -72,6 +72,7 @@ const hashPassword = (password) => bcrypt.hash(password, 10);
 
 // Check if user already exists
 const userExists = (email) => User.findOne({ email });
+const phoneNumberExists = (phoneNumber) => User.findOne({ phoneNumber });
 
 // Signup Route
 router.post("/signup", async (req, res) => {
@@ -112,6 +113,15 @@ router.post("/signup", async (req, res) => {
       return res
         .status(400)
         .json({ message: "User with the provided email already exists" });
+    }
+
+    // Check if phone number exists
+    const existingPhoneNumber = await phoneNumberExists(phoneNumber);
+    if (existingPhoneNumber) {
+      console.log("Phone number already exists:", existingPhoneNumber); // Log existing phone number
+      return res.status(400).json({
+        message: "Phone number already exists",
+      });
     }
 
     // Hash the password
@@ -235,6 +245,36 @@ router.get("/profile", async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while fetching user profile" });
+  }
+});
+
+// עדכון פרטי המשתמש
+router.put("/profile", async (req, res) => {
+  const { userId } = req.user; // נניח שהטוקן מכיל את userId
+  const { phoneNumber, address, password, mainInstrument } = req.body;
+
+  try {
+    // חיפוש המשתמש לפי ID
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // עדכון הפרטים לפי מה שנשלח מהלקוח
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (address) user.address = address;
+    if (password) user.password = await hashPassword(password); // קידוד סיסמה
+    if (mainInstrument) user.mainInstrument = mainInstrument;
+
+    await user.save(); // שמירת העדכונים
+
+    res
+      .status(200)
+      .json({ message: "User details updated successfully", user });
+  } catch (error) {
+    console.error("Error updating user details:", error);
+    res.status(500).json({ message: "Failed to update user details" });
   }
 });
 
