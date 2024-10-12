@@ -4,8 +4,6 @@ const User = require("./../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken"); // JWT module
 
-// Helper Functions
-
 // Validate input fields
 const validateSignUpInputs = ({
   firstName,
@@ -233,6 +231,7 @@ router.get("/profile", async (req, res) => {
 
     // Return user profile data
     res.status(200).json({
+      userId: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -247,6 +246,30 @@ router.get("/profile", async (req, res) => {
       .json({ message: "An error occurred while fetching user profile" });
   }
 });
+
+// // נתוני פרופיל המשתמש
+// router.get("/profile", async (req, res) => {
+//   try {
+//     const userId = req.user._id; // בדוק שהשדה _id אכן קיים באובייקט המשתמש
+//     const user = await User.findById(userId);
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // לוג של נתוני המשתמש שנשלחים ללקוח
+//     console.log("Sending user profile data:", user);
+
+//     res.json({
+//       data: {
+//         _id: user._id,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error fetching user profile:", error);
+//     res.status(500).json({ message: "Error fetching user profile" });
+//   }
+// });
 
 // עדכון פרטי המשתמש
 router.put("/profile", async (req, res) => {

@@ -9,6 +9,7 @@ const MongoStore = require("connect-mongo");
 const Post = require("./models/Post");
 const UserRouter = require("./api/User");
 const PostRouter = require("./api/Post");
+const meetingRoutes = require("./api/Meeting");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -41,6 +42,8 @@ app.use("/user", UserRouter);
 
 // Post Routes with session check middleware
 app.use("/api/posts", PostRouter);
+
+app.use("/api/meetings", meetingRoutes);
 
 // MongoDB Change Stream to watch changes in the Post collection
 const postChangeStream = Post.watch();
