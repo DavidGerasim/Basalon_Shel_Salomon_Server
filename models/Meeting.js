@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
+const schema = mongoose.Schema;
 
 // יצירת סכמת פגישות
 const meetingSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId, // סוג המידע יהיה ObjectId
+    type: schema.Types.ObjectId, // סוג המידע יהיה ObjectId
     required: true, // שדה חובה
     ref: "NewUser", // הפנייה למודל של המשתמש
   },
