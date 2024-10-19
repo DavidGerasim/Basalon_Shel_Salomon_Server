@@ -247,30 +247,6 @@ router.get("/profile", async (req, res) => {
   }
 });
 
-// // נתוני פרופיל המשתמש
-// router.get("/profile", async (req, res) => {
-//   try {
-//     const userId = req.user._id; // בדוק שהשדה _id אכן קיים באובייקט המשתמש
-//     const user = await User.findById(userId);
-
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     // לוג של נתוני המשתמש שנשלחים ללקוח
-//     console.log("Sending user profile data:", user);
-
-//     res.json({
-//       data: {
-//         _id: user._id,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Error fetching user profile:", error);
-//     res.status(500).json({ message: "Error fetching user profile" });
-//   }
-// });
-
 // עדכון פרטי המשתמש
 router.put("/profile", async (req, res) => {
   const { userId } = req.user; // נניח שהטוקן מכיל את userId

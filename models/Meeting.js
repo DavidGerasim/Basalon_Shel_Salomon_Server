@@ -1,61 +1,58 @@
 const mongoose = require("mongoose");
 const schema = mongoose.Schema;
 
-// יצירת סכמת פגישות
 const meetingSchema = new mongoose.Schema({
   userId: {
-    type: schema.Types.ObjectId, // סוג המידע יהיה ObjectId
-    required: true, // שדה חובה
-    ref: "NewUser", // הפנייה למודל של המשתמש
+    type: schema.Types.ObjectId,
+    required: true,
+    ref: "NewUser",
   },
   city: {
     type: Object,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   latitude: {
-    type: Number, // קואורדינטות רוחב
-    required: false, // שדה זה לא חובה
+    type: Number,
+    required: false,
   },
   longitude: {
-    type: Number, // קואורדינטות אורך
-    required: false, // שדה זה לא חובה
+    type: Number,
+    required: false,
   },
   date: {
     type: Date,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   beginningTime: {
     type: Date,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   endTime: {
     type: Date,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   musicians: {
     type: Number,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   friends: {
     type: Number,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   instruments: {
     type: String,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   comment: {
     type: String,
-    required: false, // שדה זה לא חובה
+    required: false,
   },
   createdAt: {
     type: Date,
-    default: Date.now, // ברירת המחדל היא תאריך היצירה
+    default: Date.now,
   },
 });
 
-// יצירת מודל על בסיס הסכמה
 const Meeting = mongoose.model("Meeting", meetingSchema);
 
-// ייצוא המודל
 module.exports = Meeting;

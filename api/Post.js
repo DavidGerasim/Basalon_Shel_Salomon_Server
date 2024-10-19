@@ -12,13 +12,60 @@ const isAuthenticated = (req, res, next) => {
 };
 
 // Route to create a new post (protected)
-router.post("/", isAuthenticated, async (req, res) => {
+// router.post("/", isAuthenticated, async (req, res) => {
+//   try {
+//     const newPost = new Post(req.body);
+//     await newPost.save();
+//     res.status(201).json(newPost);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// });
+
+router.post("/", async (req, res) => {
+  const {
+    createdBy,
+    city,
+    latitude,
+    longitude,
+    date,
+    beginningTime,
+    endTime,
+    musicians,
+    friends,
+    instruments,
+    comment,
+  } = req.body;
+
+  // לוג לכל הנתונים המתקבלים
+  console.log("Received request to create Post with data:", req.body);
+
   try {
-    const newPost = new Post(req.body);
+    const newPost = new Post({
+      createdBy,
+      city,
+      latitude,
+      longitude,
+      date,
+      beginningTime,
+      endTime,
+      musicians,
+      friends,
+      instruments,
+      comment,
+    });
+
+    console.log("Update new post:", Post);
+
     await newPost.save();
+
+    // לוג לפני שמירת הפגישה
+    console.log("Post created successfully:", newPost);
     res.status(201).json(newPost);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    // לוג במקרה של שגיאה
+    console.error("Error creating Post:", error);
+    res.status(500).json({ message: "Error creating Post", error });
   }
 });
 
@@ -46,8 +93,11 @@ router.get("/:id", async (req, res) => {
 // Route to update a post by ID (protected)
 router.put("/:id", isAuthenticated, async (req, res) => {
   try {
-    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedPost) return res.status(404).json({ message: "Post not found" });
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!updatedPost)
+      return res.status(404).json({ message: "Post not found" });
     res.json(updatedPost);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -58,7 +108,8 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 router.delete("/:id", isAuthenticated, async (req, res) => {
   try {
     const deletedPost = await Post.findByIdAndDelete(req.params.id);
-    if (!deletedPost) return res.status(404).json({ message: "Post not found" });
+    if (!deletedPost)
+      return res.status(404).json({ message: "Post not found" });
     res.json({ message: "Post deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
