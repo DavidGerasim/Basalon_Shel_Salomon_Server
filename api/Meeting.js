@@ -1,11 +1,13 @@
 const express = require("express");
-const Meeting = require("../models/Meeting"); // נניח שהמודל שלך נמצא בתיקייה models
+const Meeting = require("../models/Meeting");
+const Post = require("../models/Post");
 const router = express.Router();
 
 // יצירת פגישה חדשה
 router.post("/", async (req, res) => {
   const {
     userId,
+    postId,
     city,
     latitude,
     longitude,
@@ -22,6 +24,10 @@ router.post("/", async (req, res) => {
   console.log("Received request to create meeting with data:", req.body);
 
   try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
     const newMeeting = new Meeting({
       userId,
       city,
@@ -34,6 +40,7 @@ router.post("/", async (req, res) => {
       friends,
       instruments,
       comment,
+      phoneNumber: post.phoneNumber,
     });
 
     // לוג לפני שמירת הפגישה
@@ -51,7 +58,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// קבלת כל הפגישות של המשתמש לפי מייל
+// קבלת כל הפגישות של המשתמש לפי userId
 router.get("/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -64,6 +71,27 @@ router.get("/:userId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching meetings:", error);
     res.status(500).json({ message: "Error fetching meetings", error });
+  }
+});
+
+// קבלת כל הפגישות שהמשתמש משתתף בהן (guesting)
+router.get("/guest/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // מציאת כל הפגישות שבהן המשתמש מופיע כמשתתף
+    const meetings = await Meeting.find({ userId: userId });
+
+    if (!meetings.length) {
+      return res.status(404).json({ message: "No guesting meetings found" });
+    }
+
+    res.status(200).json(meetings);
+  } catch (error) {
+    console.error("Error fetching guesting meetings:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching guesting meetings", error });
   }
 });
 

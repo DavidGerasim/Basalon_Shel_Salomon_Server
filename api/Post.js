@@ -1,5 +1,6 @@
 const express = require("express");
 const Post = require("../models/Post");
+const User = require("../models/User");
 
 const router = express.Router();
 
@@ -41,6 +42,10 @@ router.post("/", async (req, res) => {
   console.log("Received request to create Post with data:", req.body);
 
   try {
+    const userData = await User.findById(createdBy);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
     const newPost = new Post({
       createdBy,
       city,
@@ -53,6 +58,7 @@ router.post("/", async (req, res) => {
       friends,
       instruments,
       comment,
+      phoneNumber: userData.phoneNumber,
     });
 
     console.log("Update new post:", Post);
