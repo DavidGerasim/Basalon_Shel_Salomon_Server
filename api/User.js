@@ -238,6 +238,8 @@ router.get("/profile", async (req, res) => {
       phoneNumber: user.phoneNumber,
       address: user.address,
       mainInstrument: user.mainInstrument,
+      gigs: user.gigs,
+
     });
   } catch (error) {
     console.error("Error fetching user profile: ", error);

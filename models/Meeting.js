@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { post } = require("../api/Meeting");
 const schema = mongoose.Schema;
 
 const meetingSchema = new mongoose.Schema({
@@ -6,6 +7,11 @@ const meetingSchema = new mongoose.Schema({
     type: schema.Types.ObjectId,
     required: true,
     ref: "NewUser",
+  },
+  userPost: {
+    type: schema.Types.ObjectId,
+    required: true,
+    ref: "Post",
   },
   city: {
     type: Object,

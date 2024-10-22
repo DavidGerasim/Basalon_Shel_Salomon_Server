@@ -46,6 +46,13 @@ const UserSchema = new Schema({
     type: String,
     default: path.join(__dirname, 'assets', 'img', 'Default_pfp.svg.png'), // עדכון לנתיב הנכון
   },
+  gigs: [
+    {
+      type: Schema.Types.ObjectId,
+      required: false,
+      ref: "Gig",
+    },
+  ],
 });
 
 const User = mongoose.model("NewUser", UserSchema);
